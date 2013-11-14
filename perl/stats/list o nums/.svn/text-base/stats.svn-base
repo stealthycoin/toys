@@ -1,0 +1,120 @@
+#!/usr/bin/perl
+use POSIX;
+use Term::ANSIColor;
+
+#copy args into hash for quick lookup
+%flags;
+@flags{@ARGV}=();
+@ARGV = ();
+
+#basic calculations
+$mean = $total = 0;
+while (chomp($_ = <>)) {
+    foreach (split " ",$_){
+	push(@nums, $_);
+	$total += $_;
+    }
+}
+$mean = $total / ($#nums+1);
+
+print color 'bold red';
+print "Basic Stats\n";
+print color 'reset';
+print "Count:\t" . ($#nums+1) . "\n";
+
+#numerical set
+if ($mean != 0) {
+    printf("Sum:\t$total\nMean:\t%.2f\n", $mean);
+    
+    #stdev & variance
+    $stdev = 0;
+    foreach (@nums) {
+	$stdev += ($mean-$_)**2;
+    }
+    #account for sample/population
+    $stdev = sqrt($stdev/(exists $flags{"-s"}?$#nums:$#nums+1));
+    printf "Stdev:\t%.3f (%.3f)\n", $stdev, $stdev**2;
+
+    #five number summary
+    @nums = sort {$a <=> $b} @nums;
+    ($min,$max) = ($nums[0],$nums[-1]);
+    
+    #quartile indicies
+    $Q2 = $#nums/2;
+    $Q1 = ($Q2==int($Q2)?($Q2-1)/2:floor($Q2)/2);
+    $Q3 = ($Q2==int($Q2)?$Q2+$Q1+1:ceil($Q2)+$Q1);
+    
+    #median
+    if ($Q2 == int($Q2)) {
+	$Q2 = $nums[$Q2];
+    }
+    else {
+	$Q2 = int($Q2);
+	$Q2 = ($nums[$Q2] + $nums[$Q2+1])/2;
+    }
+
+    #Q1
+    if ($Q1 == int($Q1)) {
+	$Q1 = $nums[$Q1];
+    }
+    else {
+	$Q1 = int($Q1);
+	$Q1 = ($nums[$Q1] + $nums[$Q1+1])/2;
+    }
+
+    #Q3
+    if ($Q3 == int($Q3)) {
+	$Q3 = $nums[$Q3];
+    }
+    else {
+	$Q3 = int($Q3);
+	$Q3 = ($nums[$Q3] + $nums[$Q3+1])/2;
+    }
+    
+    print color 'bold red';
+    print "\nFive number summary\n";
+    print color 'reset';
+
+    print "Min:\t$min\nQ1:\t$Q1\nMed:\t$Q2\nQ3:\t$Q3\nMax:\t$max\n";
+    
+    #quartile
+    $IQR = $Q3 - $Q1;
+    $lower_fence = $Q1 - 1.5 * $IQR;
+    $upper_fence = $Q3 + 1.5 * $IQR;
+
+    print color 'bold red';
+    print "\nQuartiles\n";
+    print color 'reset';
+
+    print "IQR:\t$IQR\nLF:\t$lower_fence\nUF:\t$upper_fence\n";
+}
+
+#no continuious data use each entry as its own class
+foreach (@nums) {
+    $f{$_}=(exists $f{$_}?$f{$_}+1:1);
+}
+
+#print table
+print color 'bold blue';
+print "\nData\tFreq.\t\%\tZ-Score\tOutlier\n";
+print color 'reset';
+foreach (sort {$a <=> $b} keys %f) {
+    print "$_\t$f{$_}\t";
+    printf("%.2f\t", ($f{$_}/($#nums+1)*100));
+    printf("%.4f\t", ($_-$mean)/$stdev);
+    $outlier = ($_<$lower_fence||$_>$upper_fence?"   x\n":"\n");
+    print color 'bold red';
+    print $outlier;
+    print color 'reset';
+}
+
+#z-scores
+if (exists $flags{"-z"}) {
+    print color 'bold cyan';
+    print "\nEnter values to calculate the Z-score of:\n";
+    print color 'reset';
+    while (chomp($_ = <>)) {
+	printf "%.4f z-value is: %.4f\n", $_, (($_-$mean)/$stdev);
+    }
+} 
+

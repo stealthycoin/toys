@@ -1,0 +1,25 @@
+#!/usr/bin/perl
+use POSIX;
+use Term::ANSIColor;
+
+%flags;
+@flags{@ARGV} = ();
+@ARGV = ();
+
+while (chomp($_ = <>)) {
+    foreach (split " ",$_) {
+	push(@nums,$_);
+    }
+}
+
+#evens are x odds are y
+@x = map {$nums[$_]} grep {!($_ & 1)} (0..$#nums);
+@y = map {$nums[$_]} grep {$_ & 1} (0..$#nums);
+
+print color 'bold red';
+print "X       Y\n";
+print color 'reset';
+
+foreach (0..$#x) {
+    print "$x[$_]\t$y[$_]\n";
+}
